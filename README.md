@@ -1,7 +1,7 @@
-# hype
+# Hype
 A php linter, formatter, documenter, and unit tester program.
 
-# dependencies
+# Dependencies
 * [phan](https://github.com/phan/phan) for static analysis.
 * [prettier](https://github.com/prettier/plugin-php) for auto formatting.
 * [phrocco](https://github.com/rossriley/phrocco) for documenting.
