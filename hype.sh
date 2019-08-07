@@ -151,6 +151,11 @@
                 if [ -z "$( composer global show | grep -E 'phrocco' )" ]; then
                     composer global require rossriley/phrocco:dev-master;
                 fi
+                # make .hype project.
+                mkdir -p ~/.hype;
+                echo '#!/bin/bash' > ~/.hype/config.sh;
+                chmod +x ~/.hype/config.sh;
+                echo "Finished installing hype. Hype config file at ~/.hype/config.sh.";
             fi
         else
             if [ -f ~/.hype/config.sh ]; then
