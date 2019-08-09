@@ -118,13 +118,13 @@
                 if [ -z "$( echo $PATH | grep -E '.composer/vendor/bin' )" ]; then
                     echo "Enter the absolute path to your bash profile file.";
                     profile='';
-                    while -z "$reply"; do
+                    while -z "$profile"; do
                         read REPLY;
                         profile=$( echo $REPLY );
-                        if [ -z "$reply" ]; then
+                        if [ -z "$profile" ]; then
                             profile='';
                             echo "Error: please try again.";
-                        elif ![ -f $reply ]; then
+                        elif ![ -f $profile ]; then
                             profile='';
                             echo "Error: unable to find profile. Please try agian.";
                         else
