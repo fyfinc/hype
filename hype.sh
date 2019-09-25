@@ -152,8 +152,7 @@
                     composer global require rossriley/phrocco:dev-master;
                 fi
                 # make .hype project.
-                echo "hype.sh: cloning hype repo...";
-                git clone https://github.com/fyfinc/hype.git;
+                # assumes user cloned hype repo in wd.
                 mv hype ~/.hype;
                 echo '#!/bin/bash' > ~/.hype/config.sh;
                 # change exec modes.
