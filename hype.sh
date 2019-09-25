@@ -83,7 +83,9 @@
             # start installation.
             wd=$( pwd );
             valid_deps=true;
-            ini='/usr/local/etc/php/7.2/php.ini';
+            # homebrew: /usr/local/etc/php/7.2/php.ini
+            ini=$( php -r 'phpinfo();' | sed -n 's/.\{1,\} \([a-z\/0-9\.]\{1,\}php\.ini\)/\1/p' );
+            ini=${ini/ /''};
             if [ -z "$( command -v composer )" ]; then
                 valid_deps=false;
                 echo "hype.sh error: composer is required to install hype.";
@@ -100,21 +102,24 @@
                 valid_deps=false;
                 echo "hype.sh error: gem is required to install hype.";
             fi
-            if [ ! -f $ini ]; then
-                valid_deps=false;
-                echo "hype.sh: hype expected php.ini to be at /usr/local/etc/php/7.2/php.ini.";
-                inidos='';
+            inidos='';
+            echo "hype.sh: is your php.ini at: $ini (y/n)?";
+            read REPLY;
+            reply=$( echo $REPLY );
+            if [ "$reply" = 'n' ]; then
                 while [ -z "$inidos" ]; do
                     echo "hype.sh: enter absolute path to your php.ini file:";
                     read REPLY;
                     inidos=$( echo $REPLY );
-                    if [ ! -f $ini ]; then
+                    if [ ! -f $inidos ]; then
                         echo "hype.sh error: ini file not found. Try again:";
                         inidos='';
                     fi
                 done
-                ini=$inidos;
+            else
+                inidos=$ini;
             fi
+            ini=$inidos;
             if [ "$valid_deps" = true ]; then
                 # install phan.
                 echo "hype.sh: installing phan...";
