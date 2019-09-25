@@ -157,7 +157,7 @@
                 # install prettier.
                 echo "hype.sh: installing prettier...";
                 if [ -z "$( npm list -g --depth 0 | grep -E 'prettier' )" ]; then
-                    npm install --global prettier @prettier/plugin-php;
+                    sudo npm install --global prettier @prettier/plugin-php;
                 fi
                 # install phrocco.
                 echo "hype.sh: installing phrocco...";
