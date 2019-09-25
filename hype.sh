@@ -81,6 +81,7 @@
     if [ "$valid_args" = true ]; then
         if [ "$i" = true ]; then
             # start installation.
+            wd=$( pwd );
             valid_deps=true;
             ini='/usr/local/etc/php/7.2/php.ini';
             if [ -z "$( command -v composer )" ]; then
@@ -118,7 +119,7 @@
                 # install phan.
                 echo "hype.sh: installing phan...";
                 # install php-ast extension.
-                if [ -z "$( cat $ini | grep -E 'extension=ast.so' )" ]; then
+                if [ -z "$( cat $ini | grep -E 'ast.so' )" ]; then
                     git clone git@github.com:nikic/php-ast.git;
                     cd php-ast;
                     phpize;
@@ -163,6 +164,7 @@
                 echo "hype.sh: installing phrocco...";
                 if [ -z "$( composer global show | grep -E 'phrocco' )" ]; then
                     composer global require rossriley/phrocco:dev-master;
+                    cd $wd;
                 fi
                 # make .hype project.
                 echo '#!/bin/bash' > ./config.sh;
