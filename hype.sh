@@ -2,7 +2,7 @@
 
 # hype.sh: lints, formats, documents, and tests php files.
 # options:
-# -i              : install hype.sh.
+# -i              : install hype.sh: working dir must be inside repo dir.
 # -n              : lint file supplied with -f.
 # -p              : format file supplied with -f.
 # -d <output dir> : generate documentation to <output dir> for file -f.
@@ -101,7 +101,18 @@
             fi
             if [ ! -f $ini ]; then
                 valid_deps=false;
-                echo "hype.sh error: php 7.2 must be installed with homebrew.";
+                echo "hype.sh: hype expected php.ini to be at /usr/local/etc/php/7.2/php.ini.";
+                inidos='';
+                while [ -z "$inidos" ]; do
+                    echo "hype.sh: enter absolute path to your php.ini file:";
+                    read REPLY;
+                    inidos=$( echo $REPLY );
+                    if [ ! -f $ini ]; then
+                        echo "hype.sh error: ini file not found. Try again:";
+                        inidos='';
+                    fi
+                done
+                ini=$inidos;
             fi
             if [ "$valid_deps" = true ]; then
                 # install phan.
@@ -114,11 +125,13 @@
                     ./configure --enable-ast;
                     make install;
                     cd .. && rm -rf php-ast;
+                    # add php-ast extension to php.ini.
+                    ./php_ini_fig.sh -f $ini -i 'extension=ast.so';
                 fi
                 if [ -z "$( echo $PATH | grep -E '.composer/vendor/bin' )" ]; then
                     echo "hype.sh: enter the absolute path to your bash profile file.";
                     profile='';
-                    while -z "$profile"; do
+                    while [ -z "$profile" ]; do
                         read REPLY;
                         profile=$( echo $REPLY );
                         if [ -z "$profile" ]; then
@@ -152,16 +165,16 @@
                     composer global require rossriley/phrocco:dev-master;
                 fi
                 # make .hype project.
-                # assumes user cloned hype repo in wd.
-                mv hype ~/.hype;
-                echo '#!/bin/bash' > ~/.hype/config.sh;
+                echo '#!/bin/bash' > ./config.sh;
                 # change exec modes.
-                chmod +x ~/.hype/hype.sh;
-                chmod +x ~/.hype/stage.sh;
-                chmod +x ~/.hype/php_ini_fig.sh;
-                chmod +x ~/.hype/config.sh;
-                # add php-ast extension to php.ini.
-                ~/.hype/php_ini_fig.sh -f $ini -i 'extension=ast.so';
+                chmod +x ./hype.sh;
+                chmod +x ./stage.sh;
+                chmod +x ./php_ini_fig.sh;
+                chmod +x ./config.sh;
+                cp -R . ~/.hype;
+                if [ -z "$( cat $profile | grep -E 'alias hype' )" ]; then
+                    echo 'alias hype=~/.hype/hype.sh' >> $profile;
+                fi
                 echo "hype.sh: finished installing hype.";
                 echo "hype.sh: hype config file at ~/.hype/config.sh.";
             fi
