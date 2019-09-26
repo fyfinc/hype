@@ -62,6 +62,7 @@
         elif [ $opt = 'c' ]; then
             c=true;
             fig=$( echo $OPTARG );
+            any=true;
         fi
     done
     
@@ -131,12 +132,13 @@
                 inidos=$ini;
             fi
             ini=$inidos;
-            echo "hype.sh: enter the absolute path to your bash profile file.";
+            echo "hype.sh: enter the name of your bash profile e.g. .profile.";
             # confirm bash profile.
             profile='';
             while [ -z "$profile" ]; do
                 read REPLY;
                 profile=$( echo $REPLY );
+                profile="$HOME/$profile";
                 if [ -z "$profile" ]; then
                     profile='';
                     echo "hype.sh error: please try again.";
@@ -230,7 +232,7 @@
                     repo=$( echo $REPLY );
                     if [ -z "$repo" ]; then
                         echo "hype.sh error: please try again.";
-                    elif [ ! -f $repo ]; then
+                    elif [ ! -d $repo ]; then
                         echo "hype.sh error: repo directory not found.";
                     else
                         repo_list[$i]=$repo;
@@ -242,7 +244,7 @@
                     doc=$( echo $REPLY );
                     if [ -z "$doc" ]; then
                         echo "hype.sh error: please try again.";
-                    elif [ ! -f $doc ]; then
+                    elif [ ! -d $doc ]; then
                         echo "hype.sh error: repo docs directory not found.";
                     else
                         doc_list[$i]=$doc;
@@ -252,7 +254,7 @@
                     unit=$( echo $REPLY );
                     if [ -z "$unit" ]; then
                         echo "hype.sh error: please try again.";
-                    elif [ ! -f $unit ]; then
+                    elif [ ! -d $unit ]; then
                         echo "hype.sh error: repo tests directory not found.";
                     else
                         repo_list[$i]=$unit;
@@ -280,30 +282,37 @@
                 done
                 echo "hype.sh: done.";
             elif [ "$fig" = 'show' ]; then
-                i=0;
-                echo "repo configs:";
-                for config in $HYPE_REPOS; do
-                    echo "#$i - [repo=${HYPE_REPOS[$i]}][docs=${HYPE_REPOS_DOC_PATHS[$i]}][tests=${HYPE_REPOS_TEST_PATHS[$i]}]";
-                    i=$(( $i + 1 ));
-                done
+                if [[ $len > 0 ]]; then
+                    i=0;
+                    echo "repo configs:";
+                    for config in $HYPE_REPOS; do
+                        echo "#$i - [repo=${HYPE_REPOS[$i]}][docs=${HYPE_REPOS_DOC_PATHS[$i]}][tests=${HYPE_REPOS_TEST_PATHS[$i]}]";
+                        i=$(( $i + 1 ));
+                    done
+                else
+                    echo "hype.sh: you have no repos.";
+                fi
                 echo "hype.sh: done.";
             elif [ "$fig" = 'delete' ]; then
-                i=0;
-                for config in $HYPE_REPOS; do
-                    echo "#$i - [repo=${HYPE_REPOS[$i]}][docs=${HYPE_REPOS_DOC_PATHS[$i]}][tests=${HYPE_REPOS_TEST_PATHS[$i]}]";
-                    echo "hype.sh: delete? (y/n)";
-                    read REPLY;
-                    confirm=$( echo $REPLY );
-                    if [ "$confirm" = 'y' ]; then
-                        unset HYPE_REPOS[$i];
-                        unset HYPE_REPOS_DOC_PATHS[$i];
-                        unset HYPE_REPOS_TEST_PATHS[$i];
-                    fi
-                done
-                repos=${HYPE_REPOS[@]};
-                docs=${HYPE_REPOS_DOC_PATHS[@]};
-                units=${HYPE_REPOS_TEST_PATHS[@]};
-                fig ${repos/ /:} ${docs/ /:} ${units/ /:};
+                if [[ $len > 0 ]]; then
+                    for config in $HYPE_REPOS; do
+                        echo "#$i - [repo=${HYPE_REPOS[$i]}][docs=${HYPE_REPOS_DOC_PATHS[$i]}][tests=${HYPE_REPOS_TEST_PATHS[$i]}]";
+                        echo "hype.sh: delete? (y/n)";
+                        read REPLY;
+                        confirm=$( echo $REPLY );
+                        if [ "$confirm" = 'y' ]; then
+                            unset HYPE_REPOS[$i];
+                            unset HYPE_REPOS_DOC_PATHS[$i];
+                            unset HYPE_REPOS_TEST_PATHS[$i];
+                        fi
+                    done
+                    repos=${HYPE_REPOS[@]};
+                    docs=${HYPE_REPOS_DOC_PATHS[@]};
+                    units=${HYPE_REPOS_TEST_PATHS[@]};
+                    fig ${repos/ /:} ${docs/ /:} ${units/ /:};
+                else
+                    echo "hype.sh: you have no repos.";
+                fi
                 echo "hype.sh: done.";
             fi
         else
