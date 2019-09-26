@@ -67,7 +67,7 @@
     done
     
     valid_args=false;
-    if [ "$f" = false ] && [ "$r" = false ] && [ "$c" = false ]; then
+    if [ "$f" = false ] && [ "$i" = false ] && [ "$c" = false ]; then
         echo "hype.sh error: a file path or repo path must be supplied to -f or -r option.";
     elif [ "$d" = true ] && [ -z "$ddest" ] && [ "$r" = false ]; then
         echo "hype.sh error: destination file path arg missing in -d option.";
