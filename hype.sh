@@ -8,6 +8,7 @@
 # -d <output dir> : generate documentation to <output dir> for file -f.
 # -t <test dir>   : run all unit test files in <test dir> for file -f.
 # -r <repo>       : run config script to run options over all staged files in repo.
+# -c <cmd>        : edit config: <cmd> is either "show", "add", or "delete".
 #
 # ~/.hype/config.sh is the config bash script. All it does is map repo names with
 # their paths and then scans the given repo's staged php files and runs the supplied
@@ -26,13 +27,14 @@
     t=false;
     f=false;
     r=false;
+    c=false;
     any=false;
     file='';
     repo='';
     ddest='';
     tdest='';
     hype_opts='';
-    while getopts ':[i]:[n]:[p]:d:t:f:r:' opt; do
+    while getopts ':[i]:[n]:[p]:d:t:f:r:c:' opt; do
         hype_opts="$hype_opts$opt";
         if [ $opt = 'i' ]; then
             i=true;
@@ -57,16 +59,21 @@
         elif [ $opt = 'r' ]; then
             r=true;
             repo=$( echo $OPTARG );
+        elif [ $opt = 'c' ]; then
+            c=true;
+            fig=$( echo $OPTARG );
         fi
     done
     
     valid_args=false;
-    if [ "$f" = false ] && [ "$r" = false ] && [ "$x" = false ]; then
+    if [ "$f" = false ] && [ "$r" = false ] && [ "$x" = false ] && [ "$c" = false ]; then
         echo "hype.sh error: a file path or repo path must be supplied to -f or -r option.";
     elif [ "$d" = true ] && [ -z "$ddest" ] && [ "$r" = false ]; then
         echo "hype.sh error: destination file path arg missing in -d option.";
     elif [ "$t" = true ] && [ -z "$tdest" ] && [ "$r" = false ]; then
         echo "hype.sh error: destination file path arg missing in -t option.";
+    elif [ "$c" = true ] && [ -z "$fig" ]; then
+        echo "hype.sh error: -c arg value missing.";
     elif [ $any = false ]; then
         echo "hype.sh error: -npdta option(s) must be supplied.";
     elif [ "$f" = true ] && [ ! -f $file ]; then
@@ -189,6 +196,115 @@
                 fi
                 echo "hype.sh: finished installing hype.";
                 echo "hype.sh: hype config file at ~/.hype/config.sh.";
+            fi
+        elif [ "$c" = true ]; then
+            source ~/.hype/config.sh;
+            declare -a HYPE_REPOS=(${HYPE_REPOS[@]});
+            declare -a HYPE_REPOS_DOC_PATHS=(${HYPE_REPOS_DOC_PATHS[@]});
+            declare -a HYPE_REPOS_TEST_PATHS=(${HYPE_REPOS_TEST_PATHS[@]});
+            len=${#HYPE_REPOS[@]};
+            fig () {(
+                repos=(${1/:/' '});
+                docs=(${2/:/' '});
+                units=(${3/:/' '});
+                bang='#!/bin/bash';
+                repo_config="export HYPE_REPOS=(${repos[@]});";
+                doc_config="export HYPE_REPOS_DOC_PATHS=(${docs[@]});";
+                unit_config="export HYPE_REPOS_TEST_PATHS=(${units[@]});";
+                echo $bang > ~/.hype/config.sh;
+                echo $repo_config >>  ~/.hype/config.sh;
+                echo $doc_config >>  ~/.hype/config.sh;
+                echo $unit_config >>  ~/.hype/config.sh;
+                chmod +x  ~/.hype/config.sh;
+            )}
+            if [ "$fig" = 'add' ]; then
+                stop=false;
+                declare -a repo_list;
+                declare -a doc_list;
+                declare -a test_list;
+                i=0;
+                while [ "$stop" = false ]; do
+                    # collect repo path.
+                    echo "hype.sh: enter absolute repo path:";
+                    read REPLY;
+                    repo=$( echo $REPLY );
+                    if [ -z "$repo" ]; then
+                        echo "hype.sh error: please try again.";
+                    elif [ ! -f $repo ]; then
+                        echo "hype.sh error: repo directory not found.";
+                    else
+                        repo_list[$i]=$repo;
+                    fi
+                    # collect repo doc path.
+                    
+                    echo "hype.sh: enter absolute repo docs path:";
+                    read REPLY;
+                    doc=$( echo $REPLY );
+                    if [ -z "$doc" ]; then
+                        echo "hype.sh error: please try again.";
+                    elif [ ! -f $doc ]; then
+                        echo "hype.sh error: repo docs directory not found.";
+                    else
+                        doc_list[$i]=$doc;
+                    fi
+                    echo "hype.sh: enter absolute repo tests path:";
+                    read REPLY;
+                    unit=$( echo $REPLY );
+                    if [ -z "$unit" ]; then
+                        echo "hype.sh error: please try again.";
+                    elif [ ! -f $unit ]; then
+                        echo "hype.sh error: repo tests directory not found.";
+                    else
+                        repo_list[$i]=$unit;
+                    fi
+                    echo "hype.sh: is [repo=$repo][docs=$doc][tests=$unit] correct? (y/n)";
+                    read REPLY;
+                    confirm=$( echo $REPLY );
+                    if [ "$confirm" = 'y' ]; then
+                        HYPE_REPOS[$len]=$repo;
+                        HYPE_REPOS_DOC_PATHS[$len]=$doc;
+                        HYPE_REPOS_TEST_PATHS[$len]=$unit;
+                        echo "hype.sh: add another repo config? (y/n)";
+                        read REPLY;
+                        another=$( echo $REPLY );
+                        if [ "$another" = 'n' ]; then
+                            # rebuild config file.
+                            stop=true;
+                            repos=${HYPE_REPOS[@]};
+                            docs=${HYPE_REPOS_DOC_PATHS[@]};
+                            units=${HYPE_REPOS_TEST_PATHS[@]};
+                            fig ${repos/ /:} ${docs/ /:} ${units/ /:};
+                        fi
+                    fi
+                    i=$(( $i + 1 ));
+                done
+                echo "hype.sh: done.";
+            elif [ "$fig" = 'show' ]; then
+                i=0;
+                echo "repo configs:";
+                for config in $HYPE_REPOS; do
+                    echo "#$i - [repo=${HYPE_REPOS[$i]}][docs=${HYPE_REPOS_DOC_PATHS[$i]}][tests=${HYPE_REPOS_TEST_PATHS[$i]}]";
+                    i=$(( $i + 1 ));
+                done
+                echo "hype.sh: done.";
+            elif [ "$fig" = 'delete' ]; then
+                i=0;
+                for config in $HYPE_REPOS; do
+                    echo "#$i - [repo=${HYPE_REPOS[$i]}][docs=${HYPE_REPOS_DOC_PATHS[$i]}][tests=${HYPE_REPOS_TEST_PATHS[$i]}]";
+                    echo "hype.sh: delete? (y/n)";
+                    read REPLY;
+                    confirm=$( echo $REPLY );
+                    if [ "$confirm" = 'y' ]; then
+                        unset HYPE_REPOS[$i];
+                        unset HYPE_REPOS_DOC_PATHS[$i];
+                        unset HYPE_REPOS_TEST_PATHS[$i];
+                    fi
+                done
+                repos=${HYPE_REPOS[@]};
+                docs=${HYPE_REPOS_DOC_PATHS[@]};
+                units=${HYPE_REPOS_TEST_PATHS[@]};
+                fig ${repos/ /:} ${docs/ /:} ${units/ /:};
+                echo "hype.sh: done.";
             fi
         else
             if [ -f ~/.hype/config.sh ]; then
