@@ -102,6 +102,7 @@
                 valid_deps=false;
                 echo "hype.sh error: gem is required to install hype.";
             fi
+            # confirm php.ini.
             inidos='';
             echo "hype.sh: is your php.ini at: $ini (y/n)?";
             read REPLY;
@@ -111,7 +112,10 @@
                     echo "hype.sh: enter absolute path to your php.ini file:";
                     read REPLY;
                     inidos=$( echo $REPLY );
-                    if [ ! -f $inidos ]; then
+                    if [ -z "$inidos" ]; then
+                        echo "hyper.sh error: please try again.";
+                        inidos='';
+                    elif [ ! -f $inidos ]; then
                         echo "hype.sh error: ini file not found. Try again:";
                         inidos='';
                     fi
@@ -120,11 +124,26 @@
                 inidos=$ini;
             fi
             ini=$inidos;
+            echo "hype.sh: enter the absolute path to your bash profile file.";
+            # confirm bash profile.
+            profile='';
+            while [ -z "$profile" ]; do
+                read REPLY;
+                profile=$( echo $REPLY );
+                if [ -z "$profile" ]; then
+                    profile='';
+                    echo "hype.sh error: please try again.";
+                elif [ ! -f $profile ]; then
+                    profile='';
+                    echo "hype.sh error: unable to find profile. Please try agian.";
+                else
+                    break;
+                fi
+            done
             if [ "$valid_deps" = true ]; then
-                # install phan.
-                echo "hype.sh: installing phan...";
                 # install php-ast extension.
                 if [ -z "$( cat $ini | grep -E 'ast.so' )" ]; then
+                    echo "hype.sh: installing phan...";
                     git clone git@github.com:nikic/php-ast.git;
                     cd php-ast;
                     phpize;
@@ -135,41 +154,27 @@
                     ./php_ini_fig.sh -f $ini -i 'extension=ast.so';
                 fi
                 if [ -z "$( echo $PATH | grep -E '.composer/vendor/bin' )" ]; then
-                    echo "hype.sh: enter the absolute path to your bash profile file.";
-                    profile='';
-                    while [ -z "$profile" ]; do
-                        read REPLY;
-                        profile=$( echo $REPLY );
-                        if [ -z "$profile" ]; then
-                            profile='';
-                            echo "hype.sh error: please try again.";
-                        elif [ ! -f $profile ]; then
-                            profile='';
-                            echo "hype.sh error: unable to find profile. Please try agian.";
-                        else
-                            break;
-                        fi
-                    done
                     # add composer global bin to PATH.
+                    echo "hype.sh: adding composer bin to PATH...";
                     echo 'export PATH="'$HOME'/.composer/vendor/bin:$PATH"' >> $profile;
                 fi
+                # install phan composer package.
                 if [ -z "$( command -v phan )" ]; then
-                    # install phan composer package.
+                    echo "hype.sh: installing phan...";
                     composer global require "phan/phan:2.x";
                     mkdir -p ~/.phan;
                     # add default phan config.
                     curl 'https://raw.githubusercontent.com/phan/phan/master/.phan/config.php' > ~/.phan/config.php;
                 fi
                 # install prettier.
-                echo "hype.sh: installing prettier...";
                 if [ -z "$( npm list -g --depth 0 | grep -E 'prettier' )" ]; then
+                    echo "hype.sh: installing prettier...";
                     sudo npm install --global prettier @prettier/plugin-php;
                 fi
                 # install phrocco.
-                echo "hype.sh: installing phrocco...";
                 if [ -z "$( composer global show | grep -E 'phrocco' )" ]; then
+                    echo "hype.sh: installing phrocco...";
                     composer global require rossriley/phrocco:dev-master;
-                    cd $wd;
                 fi
                 # make .hype project.
                 echo '#!/bin/bash' > ./config.sh;
