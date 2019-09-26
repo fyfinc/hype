@@ -24,28 +24,28 @@ if [ ! -z ${HYPE_REPOS:+${HYPE_REPOS[@]}} ] && [ ! -z ${HYPE_REPO:+$HYPE_REPO} ]
             files=$( sed 's/^.\{1,\} \([A-Za-z0-9\-\.]\{1,\}\.php\)$/\1/p' < $shd);
             # lint files.
             echo "HYPE_OPTS: $HYPE_OPTS";
-            if [ ! -z "$( echo $HYPE_OPTS | grep -qE 'n' )" ]; then
+            if [ ! -z "$( echo $HYPE_OPTS | grep -E 'n' )" ]; then
                 echo "hype.sh: linting files...";
                 for file in $files; do
                     ~/.hype/hype.sh -n -f $file;
                 done
             fi
             # auto format files.
-            if [ ! -z "$( echo $HYPE_OPTS | grep -qE 'p')" ]; then
+            if [ ! -z "$( echo $HYPE_OPTS | grep -E 'p')" ]; then
                 echo "hype.sh: formatting files...";
                 for file in $files; do
                     ~/.hype/hype.sh -p -f $file;
                 done
             fi
             # document files.
-            if [ ! -z "$( echo $HYPE_OPTS | grep -qE 'd' )" ]; then
+            if [ ! -z "$( echo $HYPE_OPTS | grep -E 'd' )" ]; then
                 echo "hype.sh: documenting files...";
                 for file in $files; do
                     ~/.hype/hype.sh -d $docs_op -f $file;
                 done;
             fi
             # unit test files.
-            if [ ! -z "$( echo $HYPE_OPTS | grep -qE 't' )" ]; then
+            if [ ! -z "$( echo $HYPE_OPTS | grep -E 't' )" ]; then
                 echo "hype.sh: unit testing files...";
                 for file in $files; do
                     ~/.hype/hype.sh -t $tests_op -f $file;
