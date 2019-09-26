@@ -34,7 +34,7 @@
     ddest='';
     tdest='';
     hype_opts='';
-    while getopts ':[i]:[n]:[p]:d:t:f:r:c:' opt; do
+    while getopts ':[i]:[n]:[p]:[d]:[t]:f:r:c:' opt; do
         hype_opts="$hype_opts$opt";
         if [ $opt = 'i' ]; then
             i=true;
