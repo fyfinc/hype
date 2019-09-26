@@ -67,7 +67,7 @@
     done
     
     valid_args=false;
-    if [ "$f" = false ] && [ "$r" = false ] && [ "$x" = false ] && [ "$c" = false ]; then
+    if [ "$f" = false ] && [ "$r" = false ] && [ "$c" = false ]; then
         echo "hype.sh error: a file path or repo path must be supplied to -f or -r option.";
     elif [ "$d" = true ] && [ -z "$ddest" ] && [ "$r" = false ]; then
         echo "hype.sh error: destination file path arg missing in -d option.";
@@ -151,7 +151,7 @@
             done
             if [ "$valid_deps" = true ]; then
                 # install php-ast extension.
-                if [ -z "$( cat $ini | grep -E 'ast.so' )" ]; then
+                if [ -z "$( cat $ini | grep -qE 'ast.so' )" ]; then
                     echo "hype.sh: installing phan...";
                     git clone git@github.com:nikic/php-ast.git;
                     cd php-ast;
@@ -162,7 +162,7 @@
                     # add php-ast extension to php.ini.
                     ./php_ini_fig.sh -f $ini -i 'extension=ast.so';
                 fi
-                if [ -z "$( echo $PATH | grep -E '.composer/vendor/bin' )" ]; then
+                if [ -z "$( echo $PATH | grep -qE '.composer/vendor/bin' )" ]; then
                     # add composer global bin to PATH.
                     echo "hype.sh: adding composer bin to PATH...";
                     echo 'export PATH="'$HOME'/.composer/vendor/bin:$PATH"' >> $profile;
@@ -176,12 +176,12 @@
                     curl 'https://raw.githubusercontent.com/phan/phan/master/.phan/config.php' > ~/.phan/config.php;
                 fi
                 # install prettier.
-                if [ -z "$( npm list -g --depth 0 | grep -E 'prettier' )" ]; then
+                if [ -z "$( npm list -g --depth 0 | grep -qE 'prettier' )" ]; then
                     echo "hype.sh: installing prettier...";
                     sudo npm install --global prettier @prettier/plugin-php;
                 fi
                 # install phrocco.
-                if [ -z "$( composer global show | grep -E 'phrocco' )" ]; then
+                if [ -z "$( composer global show | grep -qE 'phrocco' )" ]; then
                     echo "hype.sh: installing phrocco...";
                     composer global require rossriley/phrocco:dev-master;
                 fi

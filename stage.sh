@@ -5,7 +5,6 @@ if [ ! -z ${HYPE_REPOS:+${HYPE_REPOS[@]}} ] && [ ! -z ${HYPE_REPO:+$HYPE_REPO} ]
     ri=-1;
     found=false;
     for e in ${HYPE_REPOS[@]}; do
-        echo "passs";
         ri=$(( $ri + 1 ));
         e=$( basename $e );
         if [ "$e" = "$HYPE_REPO" ]; then
@@ -13,7 +12,6 @@ if [ ! -z ${HYPE_REPOS:+${HYPE_REPOS[@]}} ] && [ ! -z ${HYPE_REPO:+$HYPE_REPO} ]
             break;
         fi
     done
-    echo $ri;
     if [ "$found" = true ]; then
         if [ ! -z "$HYPE_OPTS" ]; then
             # process repo.
@@ -25,7 +23,8 @@ if [ ! -z ${HYPE_REPOS:+${HYPE_REPOS[@]}} ] && [ ! -z ${HYPE_REPO:+$HYPE_REPO} ]
             git diff --name-only --cached > $shd;
             files=$( sed 's/^.\{1,\} \([A-Za-z0-9\-\.]\{1,\}\.php\)$/\1/p' < $shd);
             # lint files.
-            if [ ! -z "$( echo $HYPE_OPTS ) | grep -qE 'n')" ]; then
+            echo "HYPE_OPTS: $HYPE_OPTS";
+            if [ ! -z "$( echo $HYPE_OPTS | grep -qE 'n' )" ]; then
                 echo "hype.sh: linting files...";
                 for file in $files; do
                     ~/.hype/hype.sh -n -f $file;
