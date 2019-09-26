@@ -3,7 +3,7 @@
 # hype.sh: lints, formats, documents, and tests php files.
 # options:
 # -i              : install hype.sh: working dir must be inside repo dir.
-# -n              : lint file supplied with -f.
+# -l              : lint file supplied with -f.
 # -p              : format file supplied with -f.
 # -d <output dir> : generate documentation to <output dir> for file -f.
 # -t <test dir>   : run all unit test files in <test dir> for file -f.
@@ -18,72 +18,104 @@
 #
 # ~/.hype must also contain php_ini_fig.sh which is used to insert ini directives in
 # a given php.ini file.
-
 (
     i=false;
-    n=false;
+    l=false;
     p=false;
     d=false;
     t=false;
     f=false;
     r=false;
     c=false;
-    any=false;
     file='';
     repo='';
     ddest='';
     tdest='';
     hype_opts='';
-    while getopts ':[i]:[n]:[p]:[d]:[t]:f:r:c:' opt; do
-        hype_opts="$hype_opts$opt";
-        if [ $opt = 'i' ]; then
-            i=true;
-            any=true;
-        elif [ $opt = 'n' ]; then
-            n=true;
-            any=true;
-        elif [ $opt = 'p' ]; then
-            p=true;
-            any=true;
-        elif [ $opt = 'd' ]; then
-            ddest=$( echo $OPTARG );
-            d=true;
-            any=true;
-        elif [ $opt = 't' ]; then
-            tdest=$( echo $OPTARG );
-            t=true;
-            any=true;
-        elif [ $opt = 'f' ]; then
-            f=true;
-            file=$( echo $OPTARG );
-        elif [ $opt = 'r' ]; then
-            r=true;
-            repo=$( echo $OPTARG );
-        elif [ $opt = 'c' ]; then
-            c=true;
-            fig=$( echo $OPTARG );
-            any=true;
+    optimus() {(
+        # optimus: returns option value
+        terms=($@);
+        o=${terms[0]};
+        terms=(${terms[@]:1});
+        arg='';
+        val='';
+        i=1; n=0;
+        for term in $( echo "${terms[*]}" ); do
+            if [ ! -z "$( echo $term | grep -E '^-[a-z]{1}$' )" ] && [ "$o" = "$term" ]; then
+                n=$i;
+            elif [ -z "$( echo $term | grep -E '^-[a-z]{1}$' )" ] && (( $i - $n == 1 )); then
+                arg=$term;
+            fi
+            i=$(( $i + 1 ));
+            if (( $n > 0 )) && [ ! -z "$arg" ]; then
+                break;
+            fi
+        done
+        if (( $n > 0 )); then
+            val=${o//'-'/''};
+        fi
+        if [ ! -z "$arg" ]; then
+            val=$val'\:'$arg;
+        fi
+        echo $val;
+    )}
+    opts=('-i' '-l' '-p' '-d' '-t' '-r' '-c' '-f');
+    cyclops='';
+    for opt in ${opts[@]}; do
+        prime=$( optimus "$opt $@" );
+        if [ ! -z "$prime" ]; then
+            prime=${prime//\\:/' '};
+            cli=($prime);
+            cyclops="$cyclops${cli[0]}";
+            void='';
+            if [ "${cli[0]}" = 'i' ]; then
+                i=true;
+            elif [ "${cli[0]}" = 'l' ]; then
+                l=true;
+            elif [ "${cli[0]}" = 'p' ]; then
+                p=true;
+            elif [ "${cli[0]}" = 'd' ]; then
+                ddest=${cli[1]};
+                d=true;
+            elif [ "${cli[0]}" = 't' ]; then
+                tdest=${cli[1]};
+                t=true;
+            elif [ "${cli[0]}" = 'f' ]; then
+                f=true;
+                file=${cli[1]};
+            elif [ "${cli[0]}" = 'r' ]; then
+                r=true;
+                repo=${cli[1]};
+            elif [ "${cli[0]}" = 'c' ]; then
+                c=true;
+                fig=${cli[1]};
+            fi
         fi
     done
-    
     valid_args=false;
+    except=false;
     if [ "$f" = false ] && [ "$i" = false ] && [ "$c" = false ] && [ "$r" = false ]; then
+        except=true;
+    fi
+    if [ "$except" = true ]; then
         echo "hype.sh error: a file path or repo path must be supplied to -f or -r option.";
-    elif [ "$d" = true ] && [ -z "$ddest" ] && [ "$r" = false ]; then
+    elif [ "$d" = true ] && [ -z "$ddest" ] && [ "$except" = true ]; then
         echo "hype.sh error: destination file path arg missing in -d option.";
-    elif [ "$t" = true ] && [ -z "$tdest" ] && [ "$r" = false ]; then
+    elif [ "$t" = true ] && [ -z "$tdest" ] && [ "$except" = true ]; then
         echo "hype.sh error: destination file path arg missing in -t option.";
+    elif [ "$l" = true ] && [ "$except" = true ]; then
+        echo "hype.sh error: -l option requires -f option and arg.";
+    elif [ "$p" = true ] && [ "$except" = true ]; then
+        echo "hype.sh error: -p option requires -f option and arg.";
     elif [ "$c" = true ] && [ -z "$fig" ]; then
         echo "hype.sh error: -c arg value missing.";
-    elif [ $any = false ]; then
-        echo "hype.sh error: -npdta option(s) must be supplied.";
     elif [ "$f" = true ] && [ ! -f $file ]; then
         echo "hype.sh error: -f arg file path does not exist.";
     elif [ "$i" = true ]; then
         echo "hype.sh: installing hype...";
         valid_args=true;
     else
-        echo "hype.sh: begin processing...";
+        echo "hype.sh: processing...";
         valid_args=true;
     fi
     if [ "$valid_args" = true ]; then
@@ -91,9 +123,9 @@
             # start installation.
             wd=$( pwd );
             valid_deps=true;
-            # homebrew: /usr/local/etc/php/7.2/php.ini
+            # homebrew 7.2 php.ini: /usr/local/etc/php/7.2/php.ini
             ini=$( php -r 'phpinfo();' | sed -n 's/.\{1,\} \([a-z\/0-9\.]\{1,\}php\.ini\)/\1/p' );
-            ini=${ini/ /''};
+            ini=${ini//' '/''};
             if [ -z "$( command -v composer )" ]; then
                 valid_deps=false;
                 echo "hype.sh error: composer is required to install hype.";
@@ -206,9 +238,9 @@
             declare -a HYPE_REPOS_TEST_PATHS=(${HYPE_REPOS_TEST_PATHS[@]});
             len=${#HYPE_REPOS[@]};
             fig () {(
-                repos=(${1/:/' '});
-                docs=(${2/:/' '});
-                units=(${3/:/' '});
+                repos=(${1//':'/' '});
+                docs=(${2//':'/' '});
+                units=(${3//':'/' '});
                 bang='#!/bin/bash';
                 repo_config="export HYPE_REPOS=(${repos[@]});";
                 doc_config="export HYPE_REPOS_DOC_PATHS=(${docs[@]});";
@@ -275,7 +307,7 @@
                             repos=${HYPE_REPOS[@]};
                             docs=${HYPE_REPOS_DOC_PATHS[@]};
                             units=${HYPE_REPOS_TEST_PATHS[@]};
-                            fig ${repos/ /:} ${docs/ /:} ${units/ /:};
+                            fig ${repos//' '/':'} ${docs//' '/':'} ${units//' '/':'};
                         fi
                     fi
                     i=$(( $i + 1 ));
@@ -285,7 +317,7 @@
                 if [[ $len > 0 ]]; then
                     i=0;
                     echo "repo configs:";
-                    for config in $HYPE_REPOS; do
+                    for config in ${HYPE_REPOS[@]}; do
                         echo "#$i - [repo=${HYPE_REPOS[$i]}][docs=${HYPE_REPOS_DOC_PATHS[$i]}][tests=${HYPE_REPOS_TEST_PATHS[$i]}]";
                         i=$(( $i + 1 ));
                     done
@@ -295,7 +327,7 @@
                 echo "hype.sh: done.";
             elif [ "$fig" = 'delete' ]; then
                 if [[ $len > 0 ]]; then
-                    for config in $HYPE_REPOS; do
+                    for config in ${HYPE_REPOS[@]}; do
                         echo "#$i - [repo=${HYPE_REPOS[$i]}][docs=${HYPE_REPOS_DOC_PATHS[$i]}][tests=${HYPE_REPOS_TEST_PATHS[$i]}]";
                         echo "hype.sh: delete? (y/n)";
                         read REPLY;
@@ -309,7 +341,7 @@
                     repos=${HYPE_REPOS[@]};
                     docs=${HYPE_REPOS_DOC_PATHS[@]};
                     units=${HYPE_REPOS_TEST_PATHS[@]};
-                    fig ${repos/ /:} ${docs/ /:} ${units/ /:};
+                    fig ${repos//' '/':'} ${docs//' '/':'} ${units//' '/':'};
                 else
                     echo "hype.sh: you have no repos.";
                 fi
@@ -317,7 +349,7 @@
             fi
         else
             if [ -f ~/.hype/config.sh ]; then
-                export HYPE_OPTS=$hype_opts;
+                export HYPE_OPTS=$cyclops;
                 export HYPE_REPO=$repo;
                 if [ "$r" = true ]; then
                     # run config script.
@@ -325,21 +357,36 @@
                     source ~/.hype/stage.sh;
                 elif [ "$r" = false ]; then
                     # run manual command.
-                    if [ "$n" = true ] && [ "$f" = true ]; then
-                        echo "Analyzing $file...";
-                        phan -f $file;
+                    if [ "$l" = true ]; then
+                        echo "hype.sh: lint $file (y/n)?";
+                        read REPLY;
+                        reply=$( echo $REPLY );
+                        if [ "$reply" = 'y' ] && [ "$l" = true ] && [ "$f" = true ]; then
+                            # lint file.
+                            echo "hype.sh: linting $file...";
+                            phan -f $file;
+                        else
+                            echo "hype.sh: aborting...";
+                        fi
                     fi
-                    echo "hype: continue (y/n)?";
-                    read REPLY;
-                    reply=$( echo $REPLY );
-                    if [ "$reply" = "y" ]; then
-                        # prettify file.
-                        if [ "$p" = true ] && [ "$f" = true ]; then
+                    if [ "$p" = true ]; then
+                        echo "hype.sh: format $file (y/n)?";
+                        read REPLY;
+                        reply=$( echo $REPLY );
+                        if [ "$reply" = 'y' ] && [ "$p" = true ] && [ "$f" = true ]; then
+                            # format file.
                             echo "Prettifying $file...";
                             prettier $file --write;
+                        else
+                            echo "hype.sh: aborting...";
                         fi
-                        # document file.
-                        if [ "$d" = true ] && [ "$f" = true ]; then
+                    fi
+                    if [ "$d" = true ]; then
+                        echo "hype.sh: document $file (y/n)?";
+                        read REPLY;
+                        reply=$( echo $REPLY );
+                        if [ "$reply" = 'y' ] && [ "$d" = true ] && [ "$f" = true ]; then
+                            # document file.
                             echo "Documenting $file...";
                             tmpdir=~/.hype/copies/$( md5 -q $file );
                             rm -rf $tmpdir && mkdir -p $tmpdir;
@@ -347,9 +394,16 @@
                             cp -f $file $tmpfile;
                             phrocco -i $tmpdir -o $ddest;
                             rm -rf $tmpdir;
+                        else
+                            echo "hype.sh: aborting...";
                         fi
-                        # unit test file.
-                        if [ "$t" = true ] && [ "$f" = true ]; then
+                    fi
+                    if [ "$t" = true ]; then
+                        echo "hype.sh: test $file (y/n)?";
+                        read REPLY;
+                        reply=$( echo $REPLY );
+                        if [ "$reply" = 'y' ] && [ "$t" = true ] && [ "$f" = true ]; then
+                            # unit test file.
                             echo "Unit testing $file...";
                             tmpdir=~/.hype/tests/$( md5 -q $file );
                             rm -rf $tmpdir && mkdir -p $tmpdir;
@@ -377,9 +431,9 @@
                                     fi
                                 done
                             done
+                        else
+                            echo "hype.sh: aborting...";
                         fi
-                    else
-                        echo "hype.sh: aborting...";
                     fi
                 fi
             else

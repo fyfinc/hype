@@ -23,11 +23,10 @@ if [ ! -z ${HYPE_REPOS:+${HYPE_REPOS[@]}} ] && [ ! -z ${HYPE_REPO:+$HYPE_REPO} ]
             git diff --name-only --cached > $shd;
             files=$( sed 's/^.\{1,\} \([A-Za-z0-9\-\.]\{1,\}\.php\)$/\1/p' < $shd);
             # lint files.
-            echo "HYPE_OPTS: $HYPE_OPTS";
-            if [ ! -z "$( echo $HYPE_OPTS | grep -E 'n' )" ]; then
+            if [ ! -z "$( echo $HYPE_OPTS | grep -E 'l' )" ]; then
                 echo "hype.sh: linting files...";
                 for file in $files; do
-                    ~/.hype/hype.sh -n -f $file;
+                    ~/.hype/hype.sh -l -f $file;
                 done
             fi
             # auto format files.
@@ -41,7 +40,7 @@ if [ ! -z ${HYPE_REPOS:+${HYPE_REPOS[@]}} ] && [ ! -z ${HYPE_REPO:+$HYPE_REPO} ]
             if [ ! -z "$( echo $HYPE_OPTS | grep -E 'd' )" ]; then
                 echo "hype.sh: documenting files...";
                 for file in $files; do
-                    ~/.hype/hype.sh -d $docs_op -f $file;
+                    (~/.hype/hype.sh -d $docs_op -f $file);
                 done;
             fi
             # unit test files.
