@@ -8,7 +8,8 @@
 #    same name as its section then no explicit -s option for it is necessary. -s options
 #    must come before they are referenced.
 # -f <path/to/php.ini>
-# -c <path/to/copy> php.ini file and answer prompt to keep changes.
+# -c This option is not a CLI option and is substituted when -p is not supplied. -c is
+#    used to prompt the user for the path to copy their php.ini.
 # -p <path/to/copypasta> php.ini file without prompt.
 # ex: php_ini_fig -f ~/php.ini -i 'short_open_tag@achor1="On"' -i 'expose_php@anchor2="Off"'
 
@@ -16,10 +17,10 @@
 	declare -a ds;
 	declare -a vs;
 	declare -i i;
-	declare -a as;
-	declare -a ss;
-	declare -a sal;
-	declare sections=( [extensions]="; Dynamic Extensions ;" [misc]="; Miscellaneous ;");
+	declare -A as=();
+	declare -A ss=();
+	declare -A sal=();
+	declare -A sections=( [extensions]="; Dynamic Extensions ;" [misc]="; Miscellaneous ;" );
 	i=0;
 	s=0;
 	work='';
@@ -30,55 +31,76 @@
 		delimiter=$1;
 		arr=$2;
 		rex=$( echo $arr | awk -v d=$delimiter '{record = $0; gsub(" ", d, record); print "(" record ")";}' );
+		rex=${rex//()/'^$'};
 		echo $rex;
 	)}
-	while getopts ':i:s:f:c:p:' opt; do
-		val="$OPTARG";
+	refar () {(
+		seg=$1;
+		input=$2;
+		declare -A segs=( [dir]="1" [anchor]="3" [val]="5" );
+		cap=${segs[$seg]};
+		val=$( echo $input | sed 's/\([a-zA-Z_\.0-9]\{0,\}\)\{0,1\}\(@\)\([a-zA-Z_\.0-9]\{0,\}\)\{1\}\(=\)\{1\}\([a-zA-Z_\.0-9]\{0,\}\)\{1\}/\'$cap'/g' );
+		echo $val;
+	)}
+	sector () {(
+		seg=$1;
+		input=$2;
+		declare -A segs=( [anchor]="2" [section]="4" );
+		cap=${segs[$seg]};
+		val=$( echo $input | sed 's/\(@\)\{1\}\([a-zA-Z_\.0-9]\{0,\}\)\{1\}\(=\)\([a-zA-Z_\.0-9]\{0,\}\)\{1\}/\'$cap'/g' );
+		echo $val;
+	)}
+	while getopts ':i:s:f:p:' opt; do
+		val=$OPTARG;
 		# remove spaces.
 		val=${val// /};
 		# check is -s val isn't empty, follows syntax, and doesn't belong already to the given section.
-		sed_anchor=$( echo $val | sed 's/\([a-zA-Z_\.0-9]\)\{0,1\}\(@\)\([a-zA-Z_\.0-9]\)\(=\)\{0,1\}\([a-zA-Z_\.0-9]\)\{0,1\}/\3/g' );
-		sed_section=$( echo $val | sed 's/\([a-zA-Z_\.0-9]\)\{0,1\}\\(@\)\([a-zA-Z_\.0-9]\)\(=\)\{0,1\}\([a-zA-Z_\.0-9]\)\{0,1\}/\5/g' );
+		sed_anchor=$( refar 'anchor' "$val" );
+		sed_section=$( sector 'section' "$val" );
+		echo stop;
 		if [ "$opt" = "s" ]; then
-			if [[ ! -z "$val" ]] && [[ ! -z "$sed_anchor" ]]; then
+			if [ ! -z "$val" ] && [ ! -z "$sed_anchor" ]; then
 				sopt='s';
 				# collect anchor.
 				anchor=$sed_anchor;
 				section=$sed_section;
 				rex=$( implode '|' "${as[$section]}" );
 				is_old_anchor=$( echo $sed_anchor | egrep $rex );
-				if [[ -z "$section" ]]; then
+				echo stop;
+				if [ -z "$section" ]; then
 					section=$anchor;
 				fi
-				if [[ -z "$is_old_anchor" ]]; then
+				if [ -z "$is_old_anchor" ]; then
 					# add anchor to config.
 					as[$section]=${as[$section]:+$anchor};
 					ss[$section]=$( echo "${as[$section]} $achor" );
 					sal[$anchor]=$section;
 				fi
+				echo stop;
 			else
 				error="Error: invalid $opt option or invalid $val value.";
 				break;
 			fi
 		elif [ "$opt" = "i" ]; then
-			if [[ ! -z "$val" ]] && [[ ! -z $( echo $val | grep '=' ) ]]; then
+			if [ ! -z "$val" ] && [ ! -z "$( echo $val | grep '=' )" ]; then
 				iopt='i';
 				# find anchor.
 				anchor=$sed_anchor;
 				rex=$( implode '|' "${as[$section]}" );
 				is_old_anchor=$( echo $sed_anchor | egrep $rex );
-				if [[ ${#sal[@]} > 0 ]] && [[ -v sal[$anchor] ]] && [[ -z "$is_old_anchor" ]]; then
+				if [[ ${#sal[@]} > 0 ]] && [ -v ${sal[$anchor]} ] && [ -z "$is_old_anchor" ]; then
 					# -s option omitted: add anchor to config.
 					section=${sal[$anchor]};
 					as[$section]=${as[$section]:+$anchor};
 					ss[$section]=$( echo "${as[$section]} $anchor" );
 				fi
+				echo stop;
 				# escape forward slashes (e.g. path slahes) in $val.
 				val=$( echo $val | sed 's|\(/\)|\\\/|g' );
 				# collect directive name.
-				ds[$i]=$( echo $val | sed 's/^\([a-zA-Z_\.0-9@]\{1,\}\)[^ ]\{0\}\=[^ ]\{0\}.\{1,\}$/\1/g' );
+				ds[$i]=$( refar 'dir' $val );
 				# collect directive value.
-				vs[$i]=$( echo $val | sed 's/^[a-zA-Z_\.0-9]\{1,\}[^ ]\{0\}\=[^ ]\{0\}\(.\{1,\}\)$/\1/g' );
+				vs[$i]=$( refar 'val' $val );
 				i=$(( $i + 1 ));
 				# escape dots in directive name.
 				if [ $( echo ${ds[$i]} | egrep -i '[\.]' ) ] && ! [ $( echo ${ds[$i]} | egrep -i '\\' ) ]; then
@@ -90,24 +112,20 @@
 				break;
 			fi
 		elif [[ "$opt" = "f" ]]; then
-			if [[ ! -z "$val" ]] && [[[ -f $val ]]]; then
+			if [ ! -z "$val" ]; then
 				fopt='f';
-				work="$val";
-			else
-				error="Error: invalid $opt option or file not found.";
-				break;
-			fi
-		elif [[ "$opt" = "c" ]]; then
-			if [[ ! -z "$val" ]] && [[[ -f $val ]]]; then
-				copt='c';
-				backup=$val;
+				work=$val;
+				work=$( eval 'echo $(dirname '$work' )''/''$(basename '$work' )');
 			else
 				error="Error: invalid $opt option or file not found.";
 				break;
 			fi
 		elif [[ "$opt" = "p" ]]; then
-			if [[ ! -z "$val" ]] && [[[ -f $val ]]]; then
+			if [ ! -z "$val" ]; then
 				popt='p';
+				backup=$val;
+				backup=$( sed 's|^\(.\{1,\}\)\(/\)$|\1|g' <<< $backup );
+				backup=$( eval 'cd '$backup'; pwd;' );
 				backup=$val;
 			else
 				backup="Error: invalid $opt option or file not found.";
@@ -115,20 +133,39 @@
 			fi
 		fi
 	done
-	optlist="$iopt$sopt$fopt$copt$popt";
+	echo stop;
+	optlist="$iopt$sopt$fopt$popt";
 	# if no errors and all required opts given.
-	if [ -z "$error" ] && [[ ! -z $( echo $optlist | egrep '^[isf(c|p)]{4}$' ) ]]; then
+	if [ -z "$( echo $optlist | egrep 'c' )" ]; then
+		optlist="c$optlist";
+		copt='c';
+		while [ -z "$backup" ]; do
+			echo "php_ini_fig.sh: what directory should php.ini be backed up to:";
+			read REPLY;
+			backup=${REPLY// /};
+			backup=$( sed 's|^\(.\{1,\}\)\(/\)$|\1|g' <<< $backup );
+			backup=$( eval 'cd '$backup'; pwd;' );
+			if [[ $( dirname $work ) = $( echo $backup ) ]]; then
+				echo "php_ini_fig.sh: working php.ini dir cannot be the same as backup dir! try again.";
+				backup='';
+			fi
+		done
+	fi
+	if [ -z "$error" ] && [ ! -z $( echo $optlist | egrep '^[isf(c|p)]{4}$' ) ]; then
 		# backup ini.
+		backup="$backup/php.ini";
 		cp $work $backup;
 		# swap files.
-		work=$backup;
-		backup=$work;
+		read bw <<< $work && read wb <<< $backup;
+		work=$wb;
+		backup=$bw;
 		# add anchors to ini.
+		echo stop;
 		for section in ${!ss[@]}; do
 			declare -a anchors;
 			declare -a findnkeep;
-			ln=$( grep -n "${sections[$section]}" $file | cut -f1 -d );
-			if [[ ! -z "$ln" ]]; then
+			ln=$( read d <<< $( grep -n "${sections[$section]}" $file ) && cut -f1 -d $d );
+			if [ ! -z "$ln" ]; then
 				anchors=(${ss[$section]});
 				for k in ${!anchors[@]}; do
 					anchor=${anchors[$k]};
@@ -143,12 +180,12 @@
 			d=${ds[$i]};
 			v=${vs[$i]};
 			# find achor ref.
-			anchor=$( echo $d | sed 's/\([a-zA-Z_\.0-9]\)\{0,1\}\(@\)\([a-zA-Z_\.0-9]\)\(=\)\{0,1\}\([a-zA-Z_\.0-9]\)\{0,1\}/\3/g' );
-			if [[ -v findnkeep[$anchor] ]]; then
+			anchor=$( refar 'anchor' $d );
+			if [ -v ${findnkeep[$anchor]} ]; then
 				# remove anchor ref from directive.
-				d=$( echo $d | sed 's/\(@[a-zA-Z_\.0-9]\{1,\}\)/''/g' );
+				d=$( refar 'ref' $d );
 				# find anchor line num.
-				ln=$( grep -n "@$anchor" $work | cut -f1 -d );
+				ln=$( read d <<< $( grep -n "@$anchor" $work ) && cut -f1 -d $d );
 				patnosemi="^;{0}$d( ){0,}=.{0,}$";
 				patsemi="^;$d( ){0,}=.{0,}$";
 				before=$( md5 $work );
@@ -162,13 +199,19 @@
 			fi
 		done
 		# unswap files.
-		if [[ ! -z "$copt" ]]; then
+		if [ ! -z "$copt" ]; then
 			echo "php_ini_fig.sh: ini changes complete. Use backup? (y/n)";
 			read reply;
 			reply=${reply// /};
 			if [[ "$reply" = 'y' ]]; then
 				# replace ini.
-				cat $backup 1>&0 tee $work;
+				tw=/tmp/hype/work.php.ini;
+				tb=/tmp/type/backup.php.ini;
+				cat $work > $tw;
+				cat $backup > $tb;
+				cat $tw > $backup;
+				cat $tb > $work;
+				rm $tw && rm $tb;
 				echo "php_ini_fig.sh: original php.ini at $work.";
 			else
 				echo "php_ini_fig.sh: changed php.ini at $work.";	
